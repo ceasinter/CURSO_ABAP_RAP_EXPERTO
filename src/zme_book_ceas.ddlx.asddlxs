@@ -1,0 +1,8 @@
+@Metadata.layer: #CORE
+annotate entity zc_book_ceas
+    with 
+{
+    @UI.hidden: true
+    BookingUUID;
+    
+}

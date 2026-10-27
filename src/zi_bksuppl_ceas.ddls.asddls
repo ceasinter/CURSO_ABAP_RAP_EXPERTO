@@ -16,6 +16,10 @@ define view entity zi_bksuppl_ceas
       @Semantics.systemDateTime.localInstanceLastChangedAt: true
       LocalLastChangedAt,
 
-      _Booking : redirected to parent zi_book_ceas
+      //    ASOCIACIONES
+      _Booking : redirected to parent zi_book_ceas,
+      _Travel  : redirected to zi_travel_ceas,
+      _Supplement,
+      _SupplementText
 
 }

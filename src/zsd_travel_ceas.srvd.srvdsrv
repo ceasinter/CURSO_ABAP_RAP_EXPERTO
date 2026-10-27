@@ -1,0 +1,8 @@
+@EndUserText.label: 'SD Travel'
+@ObjectModel.leadingEntity.name: 'zc_travel_ceas'
+define service Zsd_travel_ceas
+  provider contracts odata_v4_ui {
+  expose zc_travel_ceas  as Travel;
+  expose zc_book_ceas    as Booking;
+  expose zc_bksuppl_ceas as BookingSupplement;
+}

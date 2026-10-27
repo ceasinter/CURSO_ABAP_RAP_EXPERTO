@@ -4,7 +4,21 @@
 @Metadata.ignorePropagatedAnnotations: true
 define root view entity zr_travel_ceas
   as select from ztravel_ceas_a
-  composition [0..*] of zr_book_ceas as _Booking
+
+  //  COMPOSITION DE LA TABLA PADRE A LA TABLA HIJA
+  composition [0..*] of zr_book_ceas             as _Booking
+
+  //  ASOCIACIÓN CON LA TABLA AGENCY
+  association [0..1] to /DMO/I_Agency            as _Agency        on $projection.AgencyID = _Agency.AgencyID
+
+  //  ASOCIACIÓN CON LA TABLA CUSTOMER
+  association [0..1] to /DMO/I_Customer          as _Customer      on $projection.CustomerID = _Customer.CustomerID
+
+  //  ASOCIACIÓN CON LA TABLA OVERALL STATUS
+  association [1..1] to /DMO/I_Overall_Status_VH as _OverallStatus on $projection.OverallStatus = _OverallStatus.OverallStatus
+
+  //  ASOCIACIÓN A LA TABLA CURRENCY
+  association [0..1] to I_Currency               as _Currency      on $projection.CurrencyCode = _Currency.Currency
 {
   key travel_uuid           as TravelUUID,
       travel_id             as TravelID,
@@ -31,7 +45,11 @@ define root view entity zr_travel_ceas
       local_last_changed_at as LocalLastChangedAt,
       @Semantics.systemDateTime.lastChangedAt: true
       last_changed_at       as LastChangedAt,
-      
+
       // COMPOSITIONS
-      _Booking
+      _Booking,
+      _Agency,
+      _Customer,
+      _OverallStatus,
+      _Currency
 }

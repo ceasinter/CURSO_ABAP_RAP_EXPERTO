@@ -4,7 +4,18 @@
 @Metadata.ignorePropagatedAnnotations: true
 define view entity zr_bksuppl_ceas
   as select from zbksuppl_ceas_a
-  association to parent zr_book_ceas  as _Booking on $projection.BookingUUID = _Booking.BookingUUID
+  //  ASOCIACIÓN DE LA TABLA HIJA A LA TABLA PADRE
+  association        to parent zr_book_ceas   as _Booking        on $projection.BookingUUID = _Booking.BookingUUID
+
+  //  ASOCIACIÓN DE LA TABLA NIETO A LA TABLA ABUELO
+  association [1..1] to zr_travel_ceas        as _Travel         on $projection.TravelUUID = _Travel.TravelUUID
+
+  //  ASOCIACIÓNA A TABLA SUPPLEMENT
+  association [1..1] to /DMO/I_Supplement     as _Supplement     on $projection.SupplementID = _Supplement.SupplementID
+  association [1..*] to /DMO/I_SupplementText as _SupplementText on $projection.SupplementID = _SupplementText.SupplementID
+
+
+
 {
   key booksuppl_uuid        as BooksupplUUID,
       root_uuid             as TravelUUID,
@@ -18,7 +29,10 @@ define view entity zr_bksuppl_ceas
       // Total Etag
       @Semantics.systemDateTime.localInstanceLastChangedAt: true
       local_last_changed_at as LocalLastChangedAt,
-      
+
       // ASSOCIATIONS
-      _Booking
+      _Booking,
+      _Travel,
+      _Supplement,
+      _SupplementText
 }

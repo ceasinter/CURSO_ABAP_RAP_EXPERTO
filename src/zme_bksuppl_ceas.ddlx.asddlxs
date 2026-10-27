@@ -1,0 +1,7 @@
+@Metadata.layer: #CORE
+annotate entity zc_bksuppl_ceas with
+{
+  @UI.hidden: true
+  BooksupplUUID;
+
+}

@@ -32,6 +32,11 @@ define root view entity zi_travel_ceas
       LocalLastChangedAt,
       @Semantics.systemDateTime.lastChangedAt: true
       LastChangedAt,
-      
-      _Booking: redirected to composition child zi_book_ceas
+
+      // ASOCIACIONES
+      _Booking : redirected to composition child zi_book_ceas,
+      _Agency,
+      _Customer,
+      _OverallStatus,
+      _Currency
 }

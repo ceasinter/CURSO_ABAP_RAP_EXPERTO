@@ -1,0 +1,2 @@
+@EndUserText.label: 'Disccount Porcentage'
+define type ZTY_DISCCOUNT_PORC_CEAS : abap.int1

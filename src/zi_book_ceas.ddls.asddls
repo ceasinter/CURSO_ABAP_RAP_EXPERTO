@@ -20,7 +20,14 @@ define view entity zi_book_ceas
       // Total ETag
       @Semantics.systemDateTime.localInstanceLastChangedAt: true
       LocalLastChangedAt,
-      
-      _Travel: redirected to parent zi_travel_ceas,
-      _BookingSupplement: redirected to composition child zi_bksuppl_ceas
+
+
+      //      ASOCIACIONES
+      _Travel            : redirected to parent zi_travel_ceas,
+      _BookingSupplement : redirected to composition child zi_bksuppl_ceas,
+      _Customer,
+      _Carrier,
+      _Connection,
+      _BookingStatus
+
 }
