@@ -2,6 +2,11 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'DD Root Booking Supplement'
 @Metadata.ignorePropagatedAnnotations: true
+@ObjectModel.usageType:{
+    dataClass: #MIXED,
+    serviceQuality: #X,
+    sizeCategory: #S
+}
 define view entity zr_bksuppl_ceas
   as select from zbksuppl_ceas_a
   //  ASOCIACIÓN DE LA TABLA HIJA A LA TABLA PADRE

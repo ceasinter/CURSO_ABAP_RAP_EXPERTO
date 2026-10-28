@@ -1,0 +1,55 @@
+managed implementation in class zbp_r_travel_ceas unique;
+strict ( 2 );
+
+define behavior for zr_travel_ceas alias Travel
+persistent table ztravel_ceas_a
+lock master
+authorization master ( global, instance )
+etag master LocalLastChangedAt
+{
+  create ( authorization : global );
+  update;
+  delete;
+  field ( readonly, numbering : managed ) TravelUUID;
+  field ( readonly ) TravelID,
+  OverallStatus,
+  TotalPrice,
+  LastChangedAt,
+  LocalCreatedAt,
+  LocalCreatedBy,
+  LocalLastChangedAt,
+  LocalLastChangedBy;
+  field ( mandatory ) AgencyID, CustomerID, BeginDate, EndDate, CurrencyCode;
+  field ( features : instance ) BookingFee;
+  association _Booking { create; }
+}
+
+define behavior for zr_book_ceas alias Booking
+persistent table zbook_ceas_a
+lock dependent by _Travel
+authorization dependent by _Travel
+etag master LocalLastChangedAt
+{
+  update;
+  delete;
+  field ( readonly, numbering : managed ) BookingUUID;
+  field ( readonly ) TravelUUID, BookingID, BookingDate, LocalLastChangedAt;
+  field ( mandatory ) CarrierID, ConnectionID, CustomerID, CurrencyCode, FlightDate;
+  association _Travel;
+  association _BookingSupplement { create; }
+}
+
+define behavior for zr_bksuppl_ceas alias BookingSupplement
+persistent table zbksuppl_ceas_a
+lock dependent by _Travel
+authorization dependent by _Travel
+etag master LocalLastChangedAt
+{
+  update;
+  delete;
+  field ( readonly, numbering : managed ) BooksupplUUID;
+  field ( readonly ) TravelUUID, BookingUUID, BookingSupplementID, LocalLastChangedAt;
+  field ( mandatory ) SupplementID, CurrencyCode;
+  association _Travel;
+  association _Booking;
+}

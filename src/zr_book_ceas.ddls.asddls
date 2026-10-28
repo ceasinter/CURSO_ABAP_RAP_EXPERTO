@@ -2,6 +2,9 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'DD Root Booking'
 @Metadata.ignorePropagatedAnnotations: true
+@ObjectModel.usageType.serviceQuality: #X
+@ObjectModel.usageType.dataClass: #MIXED
+@ObjectModel.usageType.sizeCategory: #S
 define view entity zr_book_ceas
   as select from zbook_ceas_a
 
