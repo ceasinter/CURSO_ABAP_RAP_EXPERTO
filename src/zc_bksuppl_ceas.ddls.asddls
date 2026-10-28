@@ -17,15 +17,20 @@ define view entity zc_bksuppl_ceas
 
       @Consumption.valueHelpDefinition: [{ entity: {
                                            name: '/DMO/I_Supplement_StdVH',
-                                           element: 'SupplementID' }
+                                           element: 'SupplementID' },
+                                           useForValidation: true
                                          }]
-      SupplementID,
+      @ObjectModel.text.element: [ 'SupplementDescription' ]
+      SupplementID,   
+      _SupplementText.Description as SupplementDescription : localized,
+
       @Semantics.amount.currencyCode: 'CurrencyCode'
       Price,
 
       @Consumption.valueHelpDefinition: [{ entity: {
                                            name: 'I_CurrencyStdVH',
-                                           element: 'Currency' }
+                                           element: 'Currency' },
+                                           useForValidation: true
                                          }]
       CurrencyCode,
 

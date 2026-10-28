@@ -15,47 +15,85 @@ define view entity zc_book_ceas
       BookingDate,
       @Search.defaultSearchElement: true
       @Search.fuzzinessThreshold: 0.8
+
+      //      VINCULACIÓN DE AYUDAS DE CAMPO
       @Consumption.valueHelpDefinition: [{ entity: {
                                            name: '/DMO/I_Customer_StdVH',
-                                           element: 'CustomerID' }
+                                           element: 'CustomerID' },
+                                           useForValidation: true
                                          }]
+      @ObjectModel.text.element: [ 'CustomerName' ]
       CustomerID,
+      _Customer.LastName        as CustomerName,
 
       @Consumption.valueHelpDefinition: [{ entity: {
                                            name: '/DMO/I_Flight_StdVH',
-                                           element: 'AirlineID' }
+                                           element: 'AirlineID' },
+                                           label: 'Flights',
+      //                                           MAPEO DE AYUDAS
+                                           additionalBinding: [{ localElement: 'ConnectionID', element: 'ConnectionID', usage: #RESULT },
+                                                               { localElement: 'FlightDate', element: 'FlightDate', usage: #RESULT },
+                                                               { localElement: 'FlightPrice', element: 'Price', usage: #RESULT },
+                                                               { localElement: 'CurrencyCode', element: 'CurrencyCode', usage: #RESULT }],
+                                            useForValidation: true
                                          }]
+      @ObjectModel.text.element: [ 'CarrierName' ]
       CarrierID,
 
+      _Carrier.Name             as CarrierName,
+
       @Consumption.valueHelpDefinition: [{ entity: {
                                            name: '/DMO/I_Flight_StdVH',
-                                           element: 'ConnectionID' }
+                                           element: 'ConnectionID' },
+                                           label: 'Flights',
+                                           additionalBinding: [{ localElement: 'CarrierID', element: 'AirlineID', usage: #FILTER_AND_RESULT },
+                                                               { localElement: 'FlightDate', element: 'FlightDate', usage: #RESULT },
+                                                               { localElement: 'FlightPrice', element: 'Price', usage: #RESULT },
+                                                               { localElement: 'CurrencyCode', element: 'CurrencyCode', usage: #RESULT }],
+                                            useForValidation: true
                                          }]
       ConnectionID,
 
       @Consumption.valueHelpDefinition: [{ entity: {
                                            name: '/DMO/I_Flight_StdVH',
-                                           element: 'FlightDate' }
+                                           element: 'FlightDate' },
+                                           label: 'Flights',
+                                           additionalBinding: [{ localElement: 'CarrierID', element: 'AirlineID', usage: #FILTER_AND_RESULT },
+                                                               { localElement: 'ConnectionID', element: 'ConnectionID', usage: #FILTER_AND_RESULT },
+                                                               { localElement: 'FlightPrice', element: 'Price', usage: #RESULT },
+                                                               { localElement: 'CurrencyCode', element: 'CurrencyCode', usage: #RESULT }],
+                                            useForValidation: true
                                          }]
       FlightDate,
       @Semantics.amount.currencyCode: 'CurrencyCode'
       @Consumption.valueHelpDefinition: [{ entity: {
                                            name: '/DMO/I_Flight_StdVH',
-                                           element: 'Price' }
+                                           element: 'Price' },
+                                           label: 'Price',
+                                           additionalBinding: [{ localElement: 'CarrierID', element: 'AirlineID', usage: #FILTER_AND_RESULT },
+                                                               { localElement: 'ConnectionID', element: 'ConnectionID', usage: #FILTER_AND_RESULT },
+                                                               { localElement: 'FlightDate', element: 'FlightDate', usage: #FILTER_AND_RESULT },
+                                                               { localElement: 'CurrencyCode', element: 'CurrencyCode', usage: #RESULT }],
+                                            useForValidation: true
                                          }]
       FlightPrice,
 
       @Consumption.valueHelpDefinition: [{ entity: {
                                            name: 'I_CurrencyStdVH',
-                                           element: 'Currency' }
+                                           element: 'Currency' },
+                                           useForValidation: true
                                          }]
+
       CurrencyCode,
 
       @Consumption.valueHelpDefinition: [{ entity: {
                                            name: '/DMO/I_Booking_Status_VH',
-                                           element: 'BookingStatus' }
+                                           element: 'BookingStatus' },
+                                           useForValidation: true
                                          }]
+      @ObjectModel.text.element: [ 'BookingStatusText' ]
       BookingStatus,
+      _BookingStatus._Text.Text as BookingStatusText : localized,
 
       @Semantics.systemDateTime.localInstanceLastChangedAt: true
       LocalLastChangedAt,

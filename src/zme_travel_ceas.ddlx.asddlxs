@@ -170,7 +170,11 @@ annotate entity zc_travel_ceas with
    }]
   @UI.selectionField: [{ position: 40 }]
   @UI.identification: [{ position: 90 }]
+  @UI.textArrangement: #TEXT_ONLY
   OverallStatus;
+
+  @UI.hidden: true
+  OverallStatusText;
 
   @UI.hidden: true
   LocalLastChangedAt;

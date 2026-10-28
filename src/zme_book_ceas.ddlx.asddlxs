@@ -1,8 +1,89 @@
 @Metadata.layer: #CORE
-annotate entity zc_book_ceas
-    with 
+
+@UI.headerInfo.typeName: 'Booking'
+@UI.headerInfo.typeNamePlural: 'Bookings'
+@UI.headerInfo.title.type: #STANDARD
+@UI.headerInfo.title.value: 'BookingID'
+@UI.headerInfo.title.label: 'Booking'
+
+annotate entity zc_book_ceas with
 {
-    @UI.hidden: true
-    BookingUUID;
-    
+  @UI.facet: [
+
+  //PESTAÑA DE BOOKING
+  {
+  id: 'Booking',
+  purpose: #STANDARD,
+  type: #IDENTIFICATION_REFERENCE,
+  label: 'Booking',
+  position: 10
+  },
+
+  //PESTAÑA DE BOOKING SUPPLEMENT
+  {
+  id: 'BookingSupplement',
+  purpose: #STANDARD,
+  type: #LINEITEM_REFERENCE,
+  label: 'Booking Supplement',
+  position: 20,
+  targetElement: '_BookingSupplement'
+  }]
+
+  @UI.hidden: true
+  BookingUUID;
+
+  @UI.hidden: true
+  TravelUUID;
+
+  @UI.lineItem: [{ position: 20, importance: #HIGH }]
+  @UI.identification: [{ position: 20 }]
+  BookingID;
+
+  @UI.lineItem: [{ position: 30, importance: #HIGH }]
+  @UI.identification: [{ position: 30 }]
+  BookingDate;
+
+  @UI.lineItem: [{ position: 40, importance: #HIGH }]
+  @UI.identification: [{ position: 40 }]
+  CustomerID;
+
+//  @UI.lineItem: [{ position: 50, importance: #HIGH }]
+//  @UI.identification: [{ position: 50 }]
+//  CustomerName;
+
+  @UI.lineItem: [{ position: 60, importance: #HIGH }]
+  @UI.identification: [{ position: 60 }]
+  CarrierID;
+
+//  @UI.lineItem: [{ position: 70, importance: #HIGH }]
+//  @UI.identification: [{ position: 70 }]
+//  CarrierName;
+
+  @UI.lineItem: [{ position: 80, importance: #HIGH }]
+  @UI.identification: [{ position: 80 }]
+  ConnectionID;
+
+  @UI.lineItem: [{ position: 90, importance: #HIGH }]
+  @UI.identification: [{ position: 90 }]
+  FlightDate;
+
+  @UI.lineItem: [{ position: 100, importance: #HIGH }]
+  @UI.identification: [{ position: 100 }]
+  FlightPrice;
+
+  @UI.lineItem: [{ position: 110, importance: #HIGH }]
+  @UI.identification: [{ position: 110 }]
+  CurrencyCode;
+
+  @UI.lineItem: [{ position: 120, importance: #HIGH }]
+  @UI.identification: [{ position: 120 }]
+  BookingStatus;
+
+  //  @UI.lineItem: [{ position: 130, importance: #HIGH }]
+  //  @UI.identification: [{ position: 130 }]
+  @UI.hidden: true
+  BookingStatusText;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
 }
