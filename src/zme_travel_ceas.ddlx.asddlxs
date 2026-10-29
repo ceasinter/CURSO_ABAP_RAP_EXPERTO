@@ -1,7 +1,11 @@
+//METADATA EXTENSION: ES DONDE SE DEFINEN LAS ESTRUCTURAS DE LA INTERFAZ DE USUARIO FIORI ELEMENT,
+//ES EL DESARROLLO FRONTEND A TRAVÉS DEL MODELO ABAP RAP.
+
 @Metadata.layer: #CORE
 
 
 // CABECERA DE LA UI
+
 @UI: {
     headerInfo:
     {
@@ -51,7 +55,7 @@ annotate entity zc_travel_ceas with
        targetElement: '_Booking'
       }]
 
-   //COLUMNAS QUE SE MOSTRARAN EN EL UI
+   //COLUMNAS QUE SE MOSTRARAN EN LA GRILLA O ALV DE LA INTERFAZ FIORI ELEMENT
   @UI.hidden: true
   TravelUUID;
 
@@ -64,16 +68,22 @@ annotate entity zc_travel_ceas with
 
   //     AGREGAR BOTONES
      { type:#FOR_ACTION,
+
+  //     ESTA ACCIÓN dataAction: 'acceptTravel' VA ASOCIADA AL BEHAVIOR DEFINITION EN LA PARTE DE ACTIONS
      dataAction: 'acceptTravel',
         label: 'Accept',
         position: 10
       },
+
       { type:#FOR_ACTION,
      dataAction: 'rejectTravel',
         label: 'Reject',
         position: 20
       },
       { type:#FOR_ACTION,
+
+  //      ESTA ACCIÓN SERÍA ASOCIADA EN EL BEHAVIOR DEFINITION COMO UNA ACCIÓN CON PARÁMETRO
+  //      QUE SERÁ DESIGNADO DE LA ENTIDAD ABSTRACTA ( ZABST_DISCCOUNT_CEAS )
      dataAction: 'deductDiscount',
         label: 'Discount',
         position: 30,
@@ -151,6 +161,8 @@ annotate entity zc_travel_ceas with
   position: 70,
   importance: #HIGH
   }]
+
+  //  MUESTRA EL CAMPO EN LA PANTALLA DETALLE
   @UI.identification: [{ position: 70 }]
   TotalPrice;
 
@@ -161,6 +173,8 @@ annotate entity zc_travel_ceas with
   position: 80,
   importance: #HIGH
    }]
+
+  //   MUESTRA EL CAMPO EN LA VENTANA DETALLE
   @UI.identification: [{ position: 80 }]
   Description;
 

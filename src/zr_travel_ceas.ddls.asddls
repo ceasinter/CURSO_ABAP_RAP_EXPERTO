@@ -1,3 +1,5 @@
+//ENTIDAD CDS RAÍZ O ROOT ES LA CDS BASE O PRINCIPAL
+
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'DD Root Travel'
@@ -46,7 +48,7 @@ define root view entity zr_travel_ceas
       @Semantics.systemDateTime.lastChangedAt: true
       last_changed_at       as LastChangedAt,
 
-      // COMPOSITIONS
+      // COMPOSITIONS Y ASSOCIATIONS
       _Booking,
       _Agency,
       _Customer,

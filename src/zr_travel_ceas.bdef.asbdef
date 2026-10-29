@@ -1,15 +1,31 @@
+//DEFINICIÓN DE COMPORTAMIENTO ADMINISTRADO - MANAGED IMPLEMENTATION
+//BEHAVIOR DEFINITION MANAGED: EL MISMO FRAMEWORK SE ENCARGA DE REALIZAR LAS ACCIONES CUD CORRESPONDIENTES.
+//SE GENERA UNA CLASE EN EL BEHAVIOR POOL, EN DICHA CLASE SE CREA TODA LA LÓGICA DE NEGOCIO CORRESPONDIENTE.
 managed implementation in class zbp_r_travel_ceas unique;
+
+//MODO ESTRICTO VERSIÓN 2 - APLICA TODAS LAS VERIFICACIONES DE SÍNTAXIS DEL MODO ESTRICO ANTERIOR ADEMÁS DE REGLAS ADICIONALES
+//Y MÁS RIGUROSAS SOBRE EL CONTRATO DEL OBJETO DE NEGOCIO (RAP BO CONTRACT)
 strict ( 2 );
 
 define behavior for zr_travel_ceas alias Travel
 persistent table ztravel_ceas_a
+
+//LOCK MASTER: ES LA INSTRUCCIÓN QUE DEFINE A LA ENTIDAD RAÍZ COMO LA ENCARGADA DE CONTROLAR LOS BLOQUEOS DE TODA LA JERARQUÍA DE UN BO.
 lock master
+
+//AUTHORIZATION MASTER: indica que una entidad actúa como maestra de autorizaciones para sí misma o para otras entidades dependientes
 authorization master ( global, instance )
+
+//ETAG MASTER: entidad que posee y gestiona su propio campo de control de concurrencia optimista,
+//generalmente basado en una marca de tiempo (timestamp) o un hash almacenado en la tabla de base de datos
 etag master LocalLastChangedAt
 {
-  create ( authorization : global );
-  update;
+  //ACCIONES CUD (CREATE-UPDATE-DELETE GESTIONADA POR EL PROPIO FRAMEWORK RAP)
+  create ( precheck );
+  update ( precheck );
   delete;
+
+  //  GESTIÓN DE LOS CAMPOS: READONLY, NUMBERING, MANDATORY, FEATURES
   field ( readonly, numbering : managed ) TravelUUID;
   field ( readonly ) TravelID,
   OverallStatus,
@@ -21,7 +37,39 @@ etag master LocalLastChangedAt
   LocalLastChangedBy;
   field ( mandatory ) AgencyID, CustomerID, BeginDate, EndDate, CurrencyCode;
   field ( features : instance ) BookingFee;
+
+  //  VINCULACIÓN DE LAS ASOCIACIONES - RELACIONES CON ENTIDADES HIJAS
   association _Booking { create; }
+
+  //  LLAMADO A ACCIONES
+  //LLAMADO A LA ACCIÓN acceptTravel DEL  BOTÓN ACCEPT DEL ZME_TRAVEL_CEAS - METADATA EXTENSION CAPA UI
+  action ( features : instance, authorization : update ) acceptTravel result [1] $self;
+
+  //LLAMADO A LA ACCIÓN rejectTravel DEL  BOTÓN REJECT DEL ZME_TRAVEL_CEAS - METADATA EXTENSION CAPA UI
+  action ( features : instance, authorization : update ) rejectTravel result [1] $self;
+  //ACCIÓN CON PARÁMETRO - LLAMADO A LA ACCIÓN deductDdiscunt DEL  BOTÓN DISCOUNT DEL ZME_TRAVEL_CEAS - METADATA EXTENSION CAPA UI
+  action ( features : instance, authorization : update ) deductDiscount
+    parameter ZABST_DISCCOUNT_CEAS result [1] $self { default function GetDefaultsFordeductDiscount; }
+
+  //    ACCIONES INTERNAS - SON ACCIONES QUE NO APARECEN COMO BOTONES EN LA UI Y PERMITEN
+  //    REUTILIZAR LÓGICA EN VARIOS NIVELES DE LA JERARQUÍA
+  internal action recalcularTotalPrice;
+
+  //  DETERMINACIONES: SON ELEMENTOS QUE PERMITEN EJECUTAR LÓGICA AUTOMATICAMENTE, POR EJEMPLO, PARA EVITAR QUE EL
+  //  USUARIO INGRESE CIERTOS DATOS O PARA ACTIVAR CALCULOS CUANDO CAMBIA EL VALOR DE UN CAMPO.
+  determination setTravelNumber on save { create; }
+  determination setStatusToOpen on modify { create; }
+  determination calculateTotalPrice on modify { create; field BookingFee, CurrencyCode; }
+
+  //  VALIDACIONES:  SON REGLAS DE NEGOCIO QUE SE DEFINEN PARA ASEGURAR QUE LOS DATOS QUE SE CREAN O MODIFIQUEN
+  //  EN UNA ENTIDAD SEAN CORRECTOS ANTES DE GUARDARSE.
+  //ESTAS VALIDACIONES PUEDEN EXISTIR EN DOS CAPAS:
+  //EN EL FRONTEND - UI.  EN EL ZME ( METADATA EXTENSION CON LA ANOTACIÓN @CONSUMPTION.VALUEHELPDEFINITION Y EL USEFORVALIDATION: TRUE)
+  //EN EL BACKEND (OBLIGATORIAS)
+  validation validateAgency on save { create; field AgencyID; }
+  validation validateCustomer on save { create; field CustomerID; }
+  validation validateDates on save { create; field BeginDate, EndDate; }
+
 }
 
 define behavior for zr_book_ceas alias Booking
@@ -37,6 +85,15 @@ etag master LocalLastChangedAt
   field ( mandatory ) CarrierID, ConnectionID, CustomerID, CurrencyCode, FlightDate;
   association _Travel;
   association _BookingSupplement { create; }
+
+  //  DETERMINACIONES
+  determination setBookingNumer on save { create; }
+  determination setBookingDate on save { create; }
+  determination calculateTotalPrice on modify { create; field FlightPrice, CurrencyCode; }
+
+  //  VALIDACIONES
+  validation validateCustomer on save { create; field CustomerID; }
+  validation validateConnection on save { create; field CarrierID, ConnectionID, FlightDate; }
 }
 
 define behavior for zr_bksuppl_ceas alias BookingSupplement
@@ -52,4 +109,12 @@ etag master LocalLastChangedAt
   field ( mandatory ) SupplementID, CurrencyCode;
   association _Travel;
   association _Booking;
+
+  //  DETERMINACIONES
+  determination setBookingSupplNumber on save { create; }
+  determination calculateTotalPrice on modify { create; field Price, CurrencyCode; }
+
+  //  VALIDACIONES
+  validation validateSupplement on save { create; field SupplementID; }
+
 }
