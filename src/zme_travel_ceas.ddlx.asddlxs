@@ -4,7 +4,7 @@
 @Metadata.layer: #CORE
 
 
-// CABECERA DE LA UI
+// CABECERA DE LA INTERFAZ DE USUARIO
 
 @UI: {
     headerInfo:

@@ -5,6 +5,7 @@ CLASS zcl_data_generator_ceas DEFINITION
 
   PUBLIC SECTION.
 
+*    DECLARAMOS LA INTERFACE if_oo_adt_classrun QUE PERMITE EJECUTAR EN CONSOLA
     INTERFACES if_oo_adt_classrun .
   PROTECTED SECTION.
   PRIVATE SECTION.
@@ -14,11 +15,14 @@ ENDCLASS.
 
 CLASS zcl_data_generator_ceas IMPLEMENTATION.
 
-
   METHOD if_oo_adt_classrun~main.
+*  IMPLEMENTACIÓN DEL MÉTODO MAIN DE LA INTERFACE if_oo_adt_classrun.
 
 *    AGREGAR REGISTROS EN LA TABLA ZTRAVEL_CEAS_A
+*    PRIMERO SE VACÍA LA TABLA, SE ELIMINAN LOS REGISTROS QUE PUEDA CONTENER
     DELETE FROM ztravel_ceas_a.
+
+*    SE INSERTAN LOS REGISTROS PROVENIENTES DE LA TABLA /DMO/TRAVEL
     INSERT ztravel_ceas_a FROM (
       SELECT FROM /dmo/travel FIELDS
       " client
@@ -32,45 +36,64 @@ CLASS zcl_data_generator_ceas IMPLEMENTATION.
       total_price,
       currency_code,
       description,
+*      SE APLICA LA CLÁUSULA WHEN PARA DETERMINAR LOS CASOS DE LOS ESTATUS
       CASE status WHEN 'B' THEN 'A'
       WHEN 'P' THEN 'O'
       WHEN 'N' THEN 'O'
       ELSE 'X' END AS overall_status,
+
+*      ESTOS SON LOS CAMPOS DE AUDITORÍA
       createdby AS local_created_by,
       createdat AS local_created_at,
       lastchangedby AS local_last_changed_by,
       lastchangedat AS local_last_changed_at,
       lastchangedat AS last_changed_at
     ).
+
+*    SE IMPRIME EN CONSOLA LA INSERCIÓN Y CUANTOS REGISTROS FUERON INSERTADOS EN LA TABLA ZTRAVEL_CEAS_A
     out->write( |--> Travel: inserted { sy-dbcnt } rows| ).
 
 *   AGREGAR REGISTROS EN LA TABLA ZBOOK_CEAS_A
+
+*   SE VACÍA LA TABLA ZBOOK_CEAS_A
     DELETE FROM zbook_ceas_a.
+
+*    SE INSERTAN LOS REGISTROS A LA TABLA ZBOOK_CEAS_A PROVENIENTES DE LA TABLA /DMO/BOOKINGS
+*    CON RELACIÓN A LA TABLA /DMO/TRAVEL CON EL CAMPO TRAVEL_ID
     INSERT zbook_ceas_a FROM (
-        SELECT FROM /dmo/booking
-        JOIN ztravel_ceas_a ON /dmo/booking~travel_id = ztravel_ceas_a~travel_id
-        JOIN /dmo/travel ON /dmo/travel~travel_id = /dmo/booking~travel_id
-        FIELDS "client,
-        uuid(  ) AS booking_uuid,
-        ztravel_ceas_a~travel_uuid AS parent_uuid,
-        /dmo/booking~booking_id,
-        /dmo/booking~booking_date,
-        /dmo/booking~customer_id,
-        /dmo/booking~carrier_id,
-        /dmo/booking~connection_id,
-        /dmo/booking~flight_date,
-        /dmo/booking~flight_price,
-        /dmo/booking~currency_code,
-        CASE /dmo/travel~status WHEN 'P' THEN 'N'
-                                ELSE /dmo/travel~status END AS booking_status,
+    SELECT FROM /dmo/booking
+    JOIN ztravel_ceas_a ON /dmo/booking~travel_id = ztravel_ceas_a~travel_id
+    JOIN /dmo/travel ON /dmo/travel~travel_id = /dmo/booking~travel_id
+    FIELDS "client,
+    uuid(  ) AS booking_uuid,
+    ztravel_ceas_a~travel_uuid AS parent_uuid,
+    /dmo/booking~booking_id,
+    /dmo/booking~booking_date,
+    /dmo/booking~customer_id,
+    /dmo/booking~carrier_id,
+    /dmo/booking~connection_id,
+    /dmo/booking~flight_date,
+    /dmo/booking~flight_price,
+    /dmo/booking~currency_code,
+
+*    CASE PARA EL STATUS DE BOOKING
+    CASE /dmo/travel~status WHEN 'P' THEN 'N'
+                            ELSE /dmo/travel~status END AS booking_status,
         ztravel_ceas_a~last_changed_at AS local_last_changed_at
     ).
 
+*    SE IMPRIME EN CONSOLA LA INSERCIÓN DE LOS REGISTROS Y CANTIDAD DE LOS MISMOS EN LA TABLA ZBOOK_CEAS_A
     out->write( |--> Bookings: Inserted { sy-dbcnt } rows| ).
 
 
 *    AGREGAR REGISTROS ENLA TABLA ZBKSUPPL_CEAS_A
+
+*    SE VACÍA LA TABLA ZBKSUPPL_CEAS_A
     DELETE FROM zbksuppl_ceas_a.
+
+*    SE INSERTAN LOS REGISTROS PROVENIENTES DE LA TABLA /DMO/BOOK_SUPPL
+*    CON RELACIÓN A LAS TABLAS ZTRAVEL_CEAS_A Y ZBOOK_CEAS_A CON LOS CAMPOS TRAVEL_ID
+
     INSERT zbksuppl_ceas_a FROM (
         SELECT FROM /dmo/book_suppl AS supp
         JOIN ztravel_ceas_a AS trvl ON trvl~travel_id = supp~travel_id
@@ -88,6 +111,7 @@ CLASS zcl_data_generator_ceas IMPLEMENTATION.
         trvl~last_changed_at AS local_last_changed_at
     ).
 
+*    SE IMPRIME EN CONSOLA LA INSERCIÓN DE LOS REGISTROS EN LA TABLA ZBKSUPPL_CEAS_A Y LA CANTIDAD DE LOS MISMOS
     out->write( |--> Supplements: Inserted { sy-dbcnt } rows| ).
   ENDMETHOD.
 ENDCLASS.

@@ -1,45 +1,112 @@
 //DEFINICIÓN DE COMPORTAMIENTO ADMINISTRADO - MANAGED IMPLEMENTATION
 //BEHAVIOR DEFINITION MANAGED: EL MISMO FRAMEWORK SE ENCARGA DE REALIZAR LAS ACCIONES CUD CORRESPONDIENTES.
-//SE GENERA UNA CLASE EN EL BEHAVIOR POOL, EN DICHA CLASE SE CREA TODA LA LÓGICA DE NEGOCIO CORRESPONDIENTE.
+//SE GENERA UNA CLASE, EN ESTE CASO: ZBP_R_TRAVEL_CEAS EN EL BEHAVIOR POOL,
+//EN DICHA CLASE SE CREA TODA LA LÓGICA DE NEGOCIO CORRESPONDIENTE.
 managed implementation in class zbp_r_travel_ceas unique;
 
 //MODO ESTRICTO VERSIÓN 2 - APLICA TODAS LAS VERIFICACIONES DE SÍNTAXIS DEL MODO ESTRICO ANTERIOR ADEMÁS DE REGLAS ADICIONALES
 //Y MÁS RIGUROSAS SOBRE EL CONTRATO DEL OBJETO DE NEGOCIO (RAP BO CONTRACT)
 strict ( 2 );
 
+// WITH DRAFT: MODO BORRADOR: PERMITE GUARDAR TEMPORALMENTE CAMBIOS (EN DATOS NUEVOS O EXISTENTES)
+// ANTES DE CONFIRMARLOS DEFINITIVAMENTE EN LA BASE DE DATOS.
+// - GUARDADO TEMPORAL: LOS DATOS SE ALMACENAN PROVISIONALMENTE (NO EN LAS TABLAS FINALES)
+// - CONFIRMACIÓN POSTERIOR: SOLO AL FINAL, EL USUARIO DECIDE PUBLICAR LOS CAMBIOS A LA PERSISTENCIA ACTIVA (TABLAS REALES)
+// - POSIBILIDAD DE DESCARTAR: EL BORRADOR O DRAFT SE PUEDE ELIMINAR SIN CAUSAR CONSECUENCIA NINGUNA.
+// ESTO MEJORA LA EXPERIENCIA DEL USUARIO EL CUAL PERMITE TRABAJAR SIN PRESIÓN, SABIENDO QUE PUEDE GUARDAR INTERMEDIO
+// SIN AFECTAR AUN LOS DATOS REALES DE LA TABLA DE PERSISTENCIA.
+
+// PARA EL USO DE DRAFT SE DEBE HABER DEFINIDO LAS TABLAS DRAFT CORRESPONDIENTES EN EL DICCIONARIO DE DATOS
+// with draft;
+
+// EL MODO COLLABORATIVE DRAFT: PERMITE LA COLABORACIÓN EN LA QUE VARIOS USUARIOS PUEDEN EDITAR EL MISMO BORRADOR
+// SIMULTÁNEAMENTE Y VER LOS CAMBIOS EN VIVO SIN ALTERAR EL REGISTRO ACTIVO
+// ESTO INTRODUCE TEMAS DE SEGURIDAD, EL PRIMER USUARIO QUE EDITA PASA POR VALIDACIONES DE PERMISOS
+// PERO LOS OTROS USUARIOS QUE COLABORAN TAMBIEN DEBEN TENER PERMISOS SOBRE LOS DATOS SENSIBLES COPIADOS
+// EN LA TABLA DRAFT.
+// PARA MANEJAR LA SEGURIDAD, SE DEBE HABILITAR UNA QUERY EXPUESTA COMO ENTITY SOBRE LA TABLA DRAFT
+// ESA QUERY SERÁ CONTROLADA MEDIANTE UN ACCESS CONTROL QUE VALIDARÁ EL ACCESO SEGUN PERMISOS DE USUARIOS EN SAP.
+// SE DEBE HABILITAR O DEFINIR LA DRAFT ACTION SHARE
+with collaborative draft;
+
+//DEFINICION DE COMPORTAMIENTO PARA LA ENTIDAD ROOT ZR_TRAVEL_CEAS
 define behavior for zr_travel_ceas alias Travel
+
+//SE DEFINE LA TABLA DE PERSISTENCIA CORRESPONDIENTE DONDE SERÁN GESTIONADOS LOS DATOS
+//EN ESTE CASO LA TABLA CORRESPONDE A ZTRAVEL_CEAS_A.
+//ESTA PERSISTENT TABLE DEBE SER MAPEADA EN EL MAPPING DE ESTE BEHAVIOR DEFINITION MAS ABAJO DE LA
+//DEFINICIÓN DE LAS VALIDACIONES, DETERMINACIONES, ETC DE ESTA DEFINICIÓN DE COMPORTAMIENTO
 persistent table ztravel_ceas_a
+
+// SI SE ACTIVA EL MODO DRAFT, SE DEBE INVOCAR LAS DRAFT TABLES
+draft table ztravel_ceas_d
 
 //LOCK MASTER: ES LA INSTRUCCIÓN QUE DEFINE A LA ENTIDAD RAÍZ COMO LA ENCARGADA DE CONTROLAR LOS BLOQUEOS DE TODA LA JERARQUÍA DE UN BO.
 lock master
+
+// CUANDO ESTA ACTIVO EL MODO DRAFT SE DEFINE TOTAL ETAG CON EL CAMPO LASTCHANGEDAT
+// EL TOTAL ETAG DEBE IR SIEMPRE DEFINIDO LUEGO DE LOCK MASTER EN NINGUNA OTRA PARTE DEL CÓDIGO
+total etag LastChangedAt
 
 //AUTHORIZATION MASTER: indica que una entidad actúa como maestra de autorizaciones para sí misma o para otras entidades dependientes
 authorization master ( global, instance )
 
 //ETAG MASTER: entidad que posee y gestiona su propio campo de control de concurrencia optimista,
 //generalmente basado en una marca de tiempo (timestamp) o un hash almacenado en la tabla de base de datos
+//GENERALMENTE SE ASIGNA EL CAMPO LOCALLASTCHANGEDAT
 etag master LocalLastChangedAt
+
+// CUANDO ESTÁ ACTIVO EL MODO DRAFT SE USA LATE NUMBERING PARA QUE AL INTENTAR CREAR UN NUEVO REGISTRO
+// EN MODO BORRADOR NO SE GENERE EL NUMBERING DEL CAMPO UUID CORRESPONDIENTE HASTA TANTO EL USUARIO
+// NO CONFIRME EL GRABADO REAL DEL REGISTRO
+late numbering
+// ***** AL APLICAR LATE NUMBERING EN LA TABLA DRAFT CORRESPONDIENTE SE DEBE AGREGAR UN CAMPO DRAFTUUID TYPE sysuuid_x16 not null *****
+
+
 {
-  //ACCIONES CUD (CREATE-UPDATE-DELETE GESTIONADA POR EL PROPIO FRAMEWORK RAP)
+  //  ACCIONES CUD (CREATE-UPDATE-DELETE GESTIONADA POR EL PROPIO FRAMEWORK RAP)
+  //  CREACIÓN DE NUEVO REGISTRO
   create ( precheck );
+  //  MODIFICACIÓN DE REGISTRO
   update ( precheck );
+  //  ELIMINACIÓN DE REGISTRO
   delete;
 
+  //  VINCULACIÓN DE LAS ASOCIACIONES - RELACIONES CON ENTIDADES HIJAS
+  //  association _Booking { create; }
+
+  //  ESTA SERÍA LA ASSOCATION SI SE USA EL MODO WITH DRAFT
+  association _Booking { create ( features : instance, authorization : update ); with draft; }
+
   //  GESTIÓN DE LOS CAMPOS: READONLY, NUMBERING, MANDATORY, FEATURES
-  field ( readonly, numbering : managed ) TravelUUID;
+
+  //  EL CAMPO TRAVELUUID QUE ES LA CLAVE DE GENERACIÓN AUTOMÁTICA Y CAMPO CLAVE DE LA TABLA
+  //  CON FIELD (NUMBERING: MANAGED EL SISTEMA LE ASIGNA UN VALOR AUTOMÁTICAMENTE)
+  //  TOMANDO EN CUENTA QUE ESTE CAMPO DEBE SER DE TIPO sysuuid_x16
+  //  Y READONLY YA QUE NO PUEDE SER MANIPULADO POR EL USUARIO
+
+  //  SI MODO DRAFT ESTA ACTIVADO Y EL LATE NUMBERING ESTA LINEA CAMBIA
+  // SE ELIMINA EL NUMBERING: MANAGED Y SE DEJA SOLO EL READONLY
+  //  field ( readonly, numbering : managed ) TravelUUID;
+  field ( readonly ) TravelUUID;
   field ( readonly ) TravelID,
   OverallStatus,
   TotalPrice,
+
+  //  LOS CAMPOS DE AUDITORÍAS POR LO GENERAL DEBEN SER READONLY (SOLO LECTURA) YA QUE NO SERÁN MANIPULADOS POR EL USUARIO
   LastChangedAt,
   LocalCreatedAt,
   LocalCreatedBy,
   LocalLastChangedAt,
   LocalLastChangedBy;
-  field ( mandatory ) AgencyID, CustomerID, BeginDate, EndDate, CurrencyCode;
-  field ( features : instance ) BookingFee;
 
-  //  VINCULACIÓN DE LAS ASOCIACIONES - RELACIONES CON ENTIDADES HIJAS
-  association _Booking { create; }
+  //  CON FIELD MANDATORY DEFINIMOS LOS CAMPOS OBLIGATORIOS PARA EL BO
+  //  ES DECIR LOS CAMPOS ACÁ DEFINIDOS DEBEN POSEER UN VALOR QUE NO SEA VACÍO
+  field ( mandatory ) AgencyID, CustomerID, BeginDate, EndDate, CurrencyCode;
+
+  //  FIELD FEATURES: INSTANCE: Permite controlar de manera dinámica (mediante código ABAP)
+  //  si un campo es obligatorio o de solo lectura dependiendo de ciertas condiciones del negocio
+  field ( features : instance ) BookingFee;
 
   //  LLAMADO A ACCIONES
   //LLAMADO A LA ACCIÓN acceptTravel DEL  BOTÓN ACCEPT DEL ZME_TRAVEL_CEAS - METADATA EXTENSION CAPA UI
@@ -47,6 +114,7 @@ etag master LocalLastChangedAt
 
   //LLAMADO A LA ACCIÓN rejectTravel DEL  BOTÓN REJECT DEL ZME_TRAVEL_CEAS - METADATA EXTENSION CAPA UI
   action ( features : instance, authorization : update ) rejectTravel result [1] $self;
+
   //ACCIÓN CON PARÁMETRO - LLAMADO A LA ACCIÓN deductDdiscunt DEL  BOTÓN DISCOUNT DEL ZME_TRAVEL_CEAS - METADATA EXTENSION CAPA UI
   action ( features : instance, authorization : update ) deductDiscount
     parameter ZABST_DISCCOUNT_CEAS result [1] $self { default function GetDefaultsFordeductDiscount; }
@@ -70,21 +138,150 @@ etag master LocalLastChangedAt
   validation validateCustomer on save { create; field CustomerID; }
   validation validateDates on save { create; field BeginDate, EndDate; }
 
+  //  DETERMINE ACTION: ES UNA FUNCIÓN ESPECIAL DENTRO DEL BEHAVIOR DEFINITION QUE PERMITE AGRUPAR
+  // CIERTAS VALIDACIONES O DETERMINACIONES Y EJECUTARLAS EN UN CICLO DISTINTO AL PROCESO NORMAL.
+
+  // ACÁ VAMOS A DEFINIR LA DETERMINE ACTION validateAgencyID
+  // LA CUAL SERÁ INVOCADA Y EJECUTADA EN EL SIDE EFFECTOS QUE DEFINIREMOS ABAJO DONDE
+  // EL CAMPO BOOKINGFEE DE LA ENTIDAD HIJA BOOKING AFECTARÁ AL CAMPO TOTALPRICE DE LA ENTIDAD PADRE TRAVEL
+
+  //  LAS DETERMINE ACTION PUEDEN AGRUPARSE O ESPECIFICARSE DE MANERA INDIVIDUAL P. EJEMP:
+  //  EN ESTA LINEA PODEMOS AGRUPAR VALIDATIONS Y DETERMINATIONS
+  //  determine action validateAgencyID { validation validateAgency; determination setTravelNumber; }
+
+  //  O DEFINIRLAS CADA UNA
+  determine action validateAgencyID { validation validateAgency; }
+  determine action validateCustomerID { validation validateCustomer; }
+  determine action validateDateRange { validation validateDates; }
+
+
+  //  SIDE EFFECTS: EFECTOS SECUNDARIOS, SE ENCARGAR DE ACTUALIZAR EL FRONTEND / INTERFAZ DE USUARIO
+  //SIN NECESIDAD DE REALIZAR NINGUNA LÓGICA EN EL BACKEND SIN TENER QUE REFRESCAR LA APLICACIÓN
+
+  //EN ESTE CASO EL CAMPO BOOKINGFEE EL CUAL SE ENCUENTRA EN UNA DETERMINATION calculateTotalPrice
+  //AL SER MODIFICADO AFECTARÁ AL CAMPO TOTALPRICE Y ESTE CAMBIO EN TOTALPRICE SE VERÁ REFLEJADO
+  //DE MANERA AUTOMÁTICA SIN TENER QUE REFRESCAR LA APLICACIÓN EN EL NAVEGADOR.
+  //A SU VEZ LAS DETERMINE ACTION DEFINIDAS ANTERIORMENTE SERÁ INVOCADAS DESDE ESTE SIDE EFFECT
+  side effects
+  { field BookingFee affects field TotalPrice;
+    determine action validateAgencyID executed on field AgencyID affects messages;
+    determine action validateCustomerID executed on field CustomerID affects messages;
+    determine action validateDateRange executed on field BeginDate, field EndDate affects messages;
+  }
+
+  //  DRAFT ACTION: INDICA QUE DEBE MANEJAR EL MODO BORRADOR ( WITH DRAFT ) DE UN REGISTRO
+  //  EN MODO DRAFT ACTION. ESTA CONFIGURACIÓN PERMITE QUE EL FRAMEWORK MUEVA EL REGISTRO
+  //  A LA TABLA DRAFT Y GESTIONE TODAS LAS OPERACIONES RELACIONADAS CON ESE BORRADOR
+  draft action Edit;
+
+  //  ACÁ CON EL COMANDO WITH ADDITIONAL IMPLEMENTATION SE GENERA UN METODO EN EL
+  //  BEHAVIOR POOL PARA ADMINISTRAR LA ACCIÓN CON LÓGICA ADICIONAL
+  draft action Resume with additional implementation;
+  draft action Discard;
+
+  //  DRAFT ACTION SHARE POR HABER HABILILADO EL MODO WITH COLLABORATIVE DRAFT
+  draft action Share;
+
+  draft action Activate optimized;
+
+  // ******NOTA**** ESTAS DRAFT ACTIONS ( EDIT, RESUME, ACTIVATE, DISCARD) SON SOLO APLICABLES EN LA ENTIDAD ROOT
+
+  //  CON MODO WITH DRAFT ACTIVO SE DEBEN AGREGAR ESTAS INTERNAL DRAFT ACTIONS:
+  //  ADDITIONALSAVE PERMITE ACTIVAR EL GUARDADO DE REGISTRO EN MODO BORRADOR EN LA TABLA DRAFT
+  internal draft action AdditionalSave;
+
+  //  ACÁ SE DESIGNA EL DRAFT DETERMINE ACTION PREPARE.
+  //  ESTE SE UTILIZA PARA EJECUTAR LAS VALIDACIONES EN EL MODO DRAFT ANTES DE CONFIRMAR LAS ACCIONES DE LOS REGISTROS
+  //  EN LA TABLA ACTIVA
+  draft determine action Prepare
+  {
+    //    ACCEDIENDO A LAS VALIDACIONES DE LA ENTIDAD ROOT TRAVEL
+    validation validateAgency;
+    validation validateCustomer;
+    validation validateDates;
+
+    //        ACCEDIENDO A LAS VALIDACIONES DE LA ENTIDAD HIJA BOOKING CON EL ALIAS DE LA MISMA
+    validation Booking~validateCustomer;
+    validation Booking~validateConnection;
+    validation Booking~validateFlightPrice;
+
+    //        ACCEDIENDO A LAS VALIDACIONES DE LA ENTIDAD NIETA BOOKING SUPPLEMENT
+    validation BookingSupplement~validateSupplement;
+    validation BookingSupplement~validatePrice;
+
+  }
+
+
+  //  MAPPING: EN ESTA PARTE SE DEFINE EL MAPEO DE LOS CAMPOS DE LA PERSISTENT TABLE
+  // CON LA ENTIDAD DE CONSUMO CORRESPONDIENTE A ESA TABLA
+  // EN ESTE CASO SE MAPEA LA TABLA ZTRAVEL_CEAS_A CON LAS ALIAS DE ZC_TRAVEL_CEAS_A
+  mapping for ztravel_ceas_a
+    {
+
+      // LA PARTE IZQUIERDA SE INVOCA EL ALIAS DEL CAMPO DEFINIDO EN LA ENTIDAD DE PROYECCIÓN O CONSUMO
+      // EN ESTE CASO: ZC_TRAVEL_CEAS_A Y EN LA PARTE DERECHA EL NOMBRE DEL CAMPO DEFINIDO EN LA TABLA DE
+      // LA CAPA DE PERSISTENCIA EN ESTE CASO LA TABLA ZTRAVEL_CEAS_A
+      TravelUUID         = travel_uuid;
+      TravelID           = travel_id;
+      AgencyID           = agency_id;
+      CustomerID         = customer_id;
+      BeginDate          = begin_date;
+      EndDate            = end_date;
+      BookingFee         = booking_fee;
+      TotalPrice         = total_price;
+      CurrencyCode       = currency_code;
+      Description        = description;
+      OverallStatus      = overall_status;
+      LocalCreatedBy     = local_created_by;
+      LocalCreatedAt     = local_created_at;
+      LocalLastChangedBy = local_last_changed_by;
+      LocalLastChangedAt = local_last_changed_at;
+      LastChangedAt      = last_changed_at;
+    }
+
 }
 
+//DEFINICIÓN DE COMPORTAMIENTO PARA LA ENTIDAD HIJA BOOKING
 define behavior for zr_book_ceas alias Booking
+
+//TABLA DE PERSISTENCIA DE LA ENTIDAD
 persistent table zbook_ceas_a
+
+// TABLA DRAFT
+draft table zbook_ceas_d
+
+//EN ESTE CASO EL LOCK NO ES MASTER SIN DEPENDIENTE YA QUE ESTA ENTIDAD DEPENDE DE LA RELACIÓN _TRAVEL
 lock dependent by _Travel
+
+//IGUALMENTE LA AUTHORIZATION NO ES MASTER SINO DEPENDENT DE LA RELACIÓN _TRAVEL QUE ES LA ENTIDAD PADRE
 authorization dependent by _Travel
+
+//EL ETAG MASTER SI SE MANTIENE EL MISMO CAMPO NOMBRADO EN TODAS LAS ENTIDADES
 etag master LocalLastChangedAt
+late numbering
 {
+
+  //  EN ESTE CASO EL FRAMEWORK NO AGREGA CREATE PORQUE ESTA ENTIDAD ES HIJA Y DEPENDE DE PADRE ZTRAVEL_CEAS_A
+  //  MODIFACIÓN
   update;
+  //  ELIMINACIÓN
   delete;
-  field ( readonly, numbering : managed ) BookingUUID;
+
+  //  LLAMADOO DE LAS RELACIONES: COMPOSITION Y ASSOCIATIONS
+  //  association _Travel;
+  //  association _BookingSupplement { create; }
+
+  //   ESTAS SERÍAN LAS ASSOCIATION SI ESTÁ ACTIVADO EL MODO DRAFT
+  association _Travel { with draft; }
+  association _BookingSupplement { create ( authorization : update ); with draft; }
+
+  //  GESTIÓN DE LOS CAMPOS: NUMBERING, READONLY, MANDATORY
+
+  //  SI LATE NUMBERING ESTA ACTIVO SE MODIFICA ESTA LINEA QUITANDO EL NUMBERING: MANAGED
+  //  field ( readonly, numbering : managed ) BookingUUID;
+  field ( readonly ) BookingUUID;
   field ( readonly ) TravelUUID, BookingID, BookingDate, LocalLastChangedAt;
   field ( mandatory ) CarrierID, ConnectionID, CustomerID, CurrencyCode, FlightDate;
-  association _Travel;
-  association _BookingSupplement { create; }
 
   //  DETERMINACIONES
   determination setBookingNumer on save { create; }
@@ -94,21 +291,77 @@ etag master LocalLastChangedAt
   //  VALIDACIONES
   validation validateCustomer on save { create; field CustomerID; }
   validation validateConnection on save { create; field CarrierID, ConnectionID, FlightDate; }
+  validation validateFlightPrice on save { create; field FlightPrice; }
+
+  //  DEFINIMOS DETERMINE ACTIONS:
+  determine action validateFlightCosts { validation validateFlightPrice; }
+
+  //  ACÁ APLICAREMOS EL SIDE EFFECTS PARA EL CAMPO FLIGHTPRICE EL CUAL TIENE UNA DETERMINACIÓN
+  //  PARA CALCULAR EL TOTAL PRICE CON calculateTotalPrice Y ESTE AFECTARÁ EL VALOR DEL
+  //CAMPO TOTALPRICE DE LA ENTIDAD PADRE TRAVEL CON LA RELACIÓN _TRAVEL
+  //  Y A SU VEZ INVOCARÁ LA DETERMINE ACTION DEFINIDA ANTERIORMENTE
+  side effects
+  { field FlightPrice affects field _Travel.TotalPrice;
+    determine action validateFlightCosts executed on field FlightPrice affects messages; }
+
+  //  ACÁ EL MAPPING DE ESTA DEFINICIÓN ENTIDAD DE CONSUMO: ZC_BOOK_CEAS / TABLA DE PERSISTENCIA: ZBOOK_CEAS_A
+  mapping for zbook_ceas_a
+    {
+      BookingUUID        = booking_uuid;
+      TravelUUID         = parent_uuid;
+      BookingID          = booking_id;
+      BookingDate        = booking_date;
+      CustomerID         = customer_id;
+      CarrierID          = carrier_id;
+      ConnectionID       = connection_id;
+      FlightDate         = flight_date;
+      FlightPrice        = flight_price;
+      CurrencyCode       = currency_code;
+      BookingStatus      = booking_status;
+      LocalLastChangedAt = local_last_changed_at;
+    }
 }
 
+
+//DEFINICIÓN DE COMPORTAMIENTO PARA LA ENTIDAD NIETA: ZBKSUPPL_CEAS_A
+//ESTA ENTIDAD TIENE RELACIÓN CON _BOOKING COMO PADRE Y _TRAVEL COMO ABUELO
 define behavior for zr_bksuppl_ceas alias BookingSupplement
+
+//TABLA DE PERSISTENCIA
 persistent table zbksuppl_ceas_a
+
+// TABLA DRAFT
+draft table zbksuppl_ceas_d
+
+//EL LOCK ES DEPENDENT DE LA ENTIDAD ABUELA
 lock dependent by _Travel
+
+//EL AUTHORIZATION ES DEPENDENT DE LA ENTIDAD ABUELA
 authorization dependent by _Travel
+
 etag master LocalLastChangedAt
+late numbering
 {
+  //  ACÁ TAMPOCO EL FRAMEWORK GESTIONA EL CREATE PORQUE ES UNA ENTIDAD DEPENDIENTE DE OTRA
+  //  MODIFICACIÓN
   update;
+  //  ELIMINACIÓN
   delete;
-  field ( readonly, numbering : managed ) BooksupplUUID;
+
+  // ESTAS SERÍAN LAS ASOCIACIONES SI ESTÁ ACTIVADO EL MODO DRAFT
+  association _Travel { with draft; }
+  association _Booking { with draft; }
+
+  //  GESTIÓN DE LOS CAMPOS: READONLY, NUMBERING, MANDATORY
+  //  SI ESTA ACTIVO LATE NUMBERING ESTA LINEA SE MODIFICA QUITANDO EL NUMBERING: MANAGED
+  //  field ( readonly, numbering : managed ) BooksupplUUID;
+  field ( readonly ) BooksupplUUID;
   field ( readonly ) TravelUUID, BookingUUID, BookingSupplementID, LocalLastChangedAt;
   field ( mandatory ) SupplementID, CurrencyCode;
-  association _Travel;
-  association _Booking;
+
+  //  LLLAMADO A LAS RELACIONES: COMPOSITIONS Y ASSOCIATIONS
+  //  association _Travel;
+  //  association _Booking;
 
   //  DETERMINACIONES
   determination setBookingSupplNumber on save { create; }
@@ -116,5 +369,31 @@ etag master LocalLastChangedAt
 
   //  VALIDACIONES
   validation validateSupplement on save { create; field SupplementID; }
+  validation validatePrice on save { create; field Price; }
+
+  //DEFINIMOS UN DETERMINE ACTION PARA EJECUTARLO EN EL SIDE EFFECTS
+  determine action validateSupplementPrice { validation validatePrice; }
+
+  //  ACÁ APLICAREMOS SIDE EFFECTS PARA EL CAMPO PRICE QUE POSEE UNA DETERMINATION PARA CALCULAR TOTALPRICE
+  //  CON calculareTotalPrice EL CUAL AFECTARÁ EL CAMPO TOTALPRICE DE LA ENTIDAD ABUELA TRAVEL CON LA RELACIÓN _TRAVEL
+  //  Y A SU VEZ INVOCAMOS EL DETERMINE ACTION DEFINIDO PARA validateSupplementPrice
+  side effects
+  { field Price affects field _Travel.TotalPrice;
+    determine action validateSupplementPrice executed on field Price affects messages;
+  }
+
+
+  //  MAPPING DE LA TABLA ZBKSUPPL_CEAS_A CON LA ENTIDAD DE CONSUMO ZC_BKSUPPL_CEAS
+  mapping for zbksuppl_ceas_a
+    {
+      BooksupplUUID       = booksuppl_uuid;
+      TravelUUID          = root_uuid;
+      BookingUUID         = parent_uuid;
+      BookingSupplementID = booking_supplement_id;
+      SupplementID        = supplement_id;
+      Price               = price;
+      CurrencyCode        = currency_code;
+      LocalLastChangedAt  = local_last_changed_at;
+    }
 
 }
